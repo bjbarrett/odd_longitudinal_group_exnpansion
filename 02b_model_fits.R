@@ -30,24 +30,83 @@ listerine <- list(
  overlap_uds=d_hr_ov$overlap_uds ,
  dyad_index=d_hr_ov$dyad_index,
  g1_index=d_hr_ov$g1_index,
- g2_index=d_hr_ov$g2_index
+ g2_index=d_hr_ov$g2_index,
+ year_index = as.integer(as.factor(d_hr_ov$y1))
 )
 
-m_ov_1 <- ulam(
+##simulate to figure out beta regression in rethining
+sims <- rbeta2(1000 , 0.3 , 4)
+sim_list <- list( obz=sims)
+m_beta_sim <- ulam(
   alist(
-   overlap_uds ~ dnorm( mu , sigma) ,
-    mu <- a + d[dyad_index] + g[g1_index] + g[g2_index],
-    a ~ dnorm(0.1671235,1),
-    g[g1_index]  ~ normal(0,sigma_g),
-    d[dyad_index]  ~ normal(0,sigma_d),
-    c(sigma,sigma_g,sigma_d) ~ dexp(1)
+    obz ~ dbeta2( p , theta) ,
+    logit(p) <- a ,
+    a ~ dnorm(0,1),
+    theta ~ dexp(1)
+  ) , 
+  data=sim_list , chains=4 , cores=4 )
+precis(m_beta_sim)
+precis(m_beta_sim)[1,1]
+logistic(precis(m_beta_sim)[1,1]) #close to 0.3
+precis(m_beta_sim)[2,1] # close to 4
+
+####intercepts only model
+d_hr_ov[which(d_hr_ov$overlap_uds==0),]
+m_ov_0 <- ulam(
+  alist(
+    overlap_uds ~ dbeta2( p , theta) ,
+    logit(p) <- a ,
+    a ~ dnorm(0,1),
+    theta ~ dexp(1)
   ) , 
   data=listerine , chains=4 , cores=4 )
 
+precis(m_ov_0)
+
+
+m_ov_1 <- ulam(
+  alist(
+    overlap_uds ~ dbeta2( p , theta) ,
+    logit(p) <- a + d[dyad_index] + g[g1_index] + g[g2_index],
+    a ~ dnorm(0,1),
+    g[g1_index]  ~ normal(0,sigma_g),
+    d[dyad_index]  ~ normal(0,sigma_d),
+    c(theta,sigma_g,sigma_d) ~ dexp(1)
+  ) , 
+  data=listerine , chains=4 , cores=4 , control=list(adapt_delta=0.9))
+
+dens(listerine$overlap_uds)
+plot(precis(m_ov_1 , depth=2))
 precis(m_ov_1 , depth=2)
-stancode(m_hr_1)
 
+m_ov_1a <- ulam(
+  alist(
+    overlap_uds ~ dbeta2( p , theta) ,
+    logit(p) <- a + d[dyad_index] + g[g1_index] ,
+    logit(p) <- a + d[dyad_index] + g[g2_index] ,
+    a ~ dnorm(0,1),
+    g[g1_index]  ~ normal(0,sigma_g),
+    d[dyad_index]  ~ normal(0,sigma_d),
+    c(theta,sigma_g,sigma_d) ~ dexp(1)
+  ) , 
+  data=listerine , chains=4 , cores=4 , control=list(adapt_delta=0.9))
+plot(precis(m_ov_1a , depth=2))
+precis(m_ov_1a , depth=2)
 
+str(d_hr_ov)
 
-
+m_ov_1c <- ulam(
+  alist(
+    overlap_uds ~ dbeta2( p , theta) ,
+    logit(p) <- a + d[dyad_index] + g[g1_index] + g[g2_index] + y[year_index],
+    a ~ dnorm(0,1),
+    g[g1_index]  ~ normal(0,sigma_g),
+    d[dyad_index]  ~ normal(0,sigma_d),
+    y[year_index]  ~ normal(0,sigma_y),
+    
+    c(theta,sigma_g,sigma_d,sigma_y) ~ dexp(1)
+  ) , 
+  data=listerine , chains=4 , cores=4 , control=list(adapt_delta=0.95))
+precis(m_ov_1c , depth=2)
+plot(precis(m_ov_1c , depth=2 , pars='y'))
 

@@ -11,6 +11,8 @@ d_hr_gs$group_size_std <- standardize(d_hr_gs$group_size)
 ##home range overlap########3
 d_hr_ov <- read.csv("data/df_slpHR_dyadic_overlap.csv")
 str(d_hr_ov)
+d_hr_ov <- d_hr_ov[d_hr_ov$overlap_uds>0,]
+d_hr_ov$overlap_uds <- ifelse(d_hr_ov$overlap_uds==0 , 0.000000001 , d_hr_ov$overlap_uds)
 # it looks like there are reps where groups are compared to themselves
 # extract years and group IDs
 d_hr_ov$g1 <- substr(d_hr_ov$p1, 1, 2)
