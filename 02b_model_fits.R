@@ -125,5 +125,6 @@ m_ov_2 <- ulam(
     c(theta,sigma_g,sigma_d) ~ dexp(1),
     Rho ~ lkj_corr(3)
   ) , 
-  data=listerine , chains=4 , cores=4 , control=list(adapt_delta=0.95))
+  data=listerine , chains=4 , cores=4 , control=list(adapt_delta=0.99))
+precis(m_ov_2 , depth=2)
 
