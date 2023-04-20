@@ -31,7 +31,9 @@ listerine <- list(
  dyad_index=d_hr_ov$dyad_index,
  g1_index=d_hr_ov$g1_index,
  g2_index=d_hr_ov$g2_index,
- year_index = as.integer(as.factor(d_hr_ov$y1))
+ year_index = as.integer(as.factor(d_hr_ov$y1)),
+ group_size1_std = d_hr_ov$group_size1_std ,
+ group_size2_std = d_hr_ov$group_size2_std
 )
 
 ##simulate to figure out beta regression in rethining
@@ -98,7 +100,8 @@ str(d_hr_ov)
 m_ov_1c <- ulam(
   alist(
     overlap_uds ~ dbeta2( p , theta) ,
-    logit(p) <- a + d[dyad_index] + g[g1_index] + g[g2_index] + y[year_index],
+    logit(p) <- a + d[dyad_index] + g[g1_index] + g[g2_index] + y[year_index]
+    ,
     a ~ dnorm(0,1),
     g[g1_index]  ~ normal(0,sigma_g),
     d[dyad_index]  ~ normal(0,sigma_d),
@@ -109,4 +112,18 @@ m_ov_1c <- ulam(
   data=listerine , chains=4 , cores=4 , control=list(adapt_delta=0.95))
 precis(m_ov_1c , depth=2)
 plot(precis(m_ov_1c , depth=2 , pars='y'))
+
+m_ov_2 <- ulam(
+  alist(
+    overlap_uds ~ dbeta2( p , theta) ,
+    logit(p) <- d[dyad_index] + g[g1_index] + g[g2_index]
+    + bGS_g[g1_index]*group_size1_std + bGS_g[g2_index]*group_size2_std,
+     
+    c(a,bGS) ~ dnorm(0,1),
+    c(g,bGS_g)[g1_index]  ~ multi_normal( c(a,bGS) , Rho , sigma_g ),
+    d[dyad_index]  ~ normal(0,sigma_d),
+    c(theta,sigma_g,sigma_d) ~ dexp(1),
+    Rho ~ lkj_corr(3)
+  ) , 
+  data=listerine , chains=4 , cores=4 , control=list(adapt_delta=0.95))
 

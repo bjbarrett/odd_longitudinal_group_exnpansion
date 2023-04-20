@@ -45,9 +45,27 @@ d_hr_ov[d_hr_ov$g1=="di",]
 
 d_hr_ov$dyad <- apply(d_hr_ov[,5:6], 1, function(s) paste0(sort(s), collapse=''))
 d_hr_ov$dyad_index <- as.integer(as.factor(d_hr_ov$dyad))
-sort(unique(dyad))
+sort(unique(d_hr_ov$dyad))
 em <- factorial(11)/(factorial(2)*factorial(11-2)) #max possible dyad cobos
-em > length(unique(dyad)) # should be true
+em > length(unique(d_hr_ov$dyad)) # should be true
+
+str(d_hr_ov)
+d_hr_gs_min <- d_hr_gs[,4:9]
+joined_df <- left_join(d_hr_ov, d_hr_gs_min, by=join_by(p1 == id))
+
+for(i in 15:19){
+  names(joined_df)[i] <- paste0(names(joined_df) , "1")[i]
+}
+joined_df <- left_join(joined_df, d_hr_gs_min, by=join_by(p2 == id))
+for(i in 20:24){
+  names(joined_df)[i] <- paste0(names(joined_df) , "2")[i]
+}
+str(joined_df)
+d_hr_ov <- joined_df
+d_hr_ov$group_size1_std <- standardize(d_hr_ov$group_size1)
+d_hr_ov$group_size2_std <- standardize(d_hr_ov$group_size2)
+d_hr_ov$hr_area_mean1_std <- standardize(d_hr_ov$hr_area_mean1)
+d_hr_ov$hr_area_mean2_std <- standardize(d_hr_ov$hr_area_mean2)
 
 ##daily path length
 d_hr_dpl <- read.csv("data/df_GPS_daily_path_length.csv")
