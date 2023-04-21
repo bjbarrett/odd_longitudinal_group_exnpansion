@@ -1,6 +1,8 @@
 library(rethinking)
 library(janitor)
 library(dplyr)
+library(tidyverse)
+
 ##group size
 d_hr_gs <- read.csv("data/df_slpHRarea_group_size.csv")
 str(d_hr_gs)
@@ -8,7 +10,7 @@ d_hr_gs$group_index <- as.integer(as.factor(d_hr_gs$group))
 d_hr_gs$group_size_std <- standardize(d_hr_gs$group_size)
 
 
-##home range overlap########3
+##home range overlap########
 d_hr_ov <- read.csv("data/df_slpHR_dyadic_overlap.csv")
 str(d_hr_ov)
 d_hr_ov <- d_hr_ov[d_hr_ov$overlap_uds>0,]
@@ -51,7 +53,7 @@ em > length(unique(d_hr_ov$dyad)) # should be true
 
 str(d_hr_ov)
 d_hr_gs_min <- d_hr_gs[,4:9]
-joined_df <- left_join(d_hr_ov, d_hr_gs_min, by=join_by(p1 == id))
+joined_df <- left_join(d_hr_ov, d_hr_gs_min, by=dplyr::join_by(p1 == id))
 
 for(i in 15:19){
   names(joined_df)[i] <- paste0(names(joined_df) , "1")[i]
@@ -76,3 +78,13 @@ d_hr_dpl$year <-as.integer(substr(d_hr_dpl$date, 1, 4))
 d_hr_gs$group_index <- as.integer(as.factor(d_hr_gs$group))
 d_hr_gs$group_size_std <- standardize(d_hr_gs$group_size)
 
+# get group sizes by group_year
+annual_group_sizes <- read.csv("data/annual_group_sizes.csv") %>% 
+  mutate(id = str_c(group,year,sep = "_")) %>% 
+  dplyr::select(id, group_size) 
+
+# give dpl dataframe group size column
+d_hr_dpl <- d_hr_dpl %>% 
+  mutate(id = str_c(group, year, sep = "_")) %>% 
+  left_join(annual_group_sizes, by = "id") %>% 
+  dplyr::select(-id)
