@@ -47,6 +47,7 @@ m_gs_1_gauss <- ulam(
     c(sigma,sigma_g) ~ dexp(1)
   ) , data=d_hr_gs , chains=4 , cores=4 ,control=list(adapt_delta=0.99))
 
+set.seed(420)
 m_gs_1_gam <- ulam(
   alist(
     hr_area_mean ~ dgamma2( lambda , k) ,
@@ -180,3 +181,26 @@ m_ov_4 <- ulam(
   data=listerine , chains=4 , cores=4 , iter=1000, control=list(adapt_delta=0.99))
 precis(m_ov_4 , depth=1 )
 precis(m_ov_4 , depth=3 )
+
+##########DAILY PATH LENGTH##############
+#varying intecepts and slopes
+
+# gamma
+set.seed(13)
+m_dpl_1_gam <- ulam(
+  alist(
+    dpl_mean ~ dgamma2( lambda , k) ,
+    log(lambda) <- a_g[group_index] + bGS_g[group_index]*group_size_std,
+    c(a_g,bGS_g)[group_index] ~ multi_normal(c(a,bGS),Rho_g,sigma_g),
+    a ~ dnorm(2.302197,1),
+    bGS ~ dnorm(0,1),
+    Rho_g ~ dlkjcorr(4),
+    c(k,sigma_g) ~ dexp(1)
+  ) , data=d_dpl_gs , chains=4 , cores=4 ,control=list(adapt_delta=0.99))
+
+
+trankplot(m_gs_1) #diagnostics of mixing
+sort(unique(d_dpl_gs$group))
+temp <- precis(m_dpl_1_gam , depth=3 )
+names <- paste(temp@row.names[1:22] , sort(unique(d_hr_gs$group)) )
+plot(precis(m_gs_1_gam , depth=3 ))

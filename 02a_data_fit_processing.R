@@ -9,7 +9,6 @@ str(d_hr_gs)
 d_hr_gs$group_index <- as.integer(as.factor(d_hr_gs$group))
 d_hr_gs$group_size_std <- standardize(d_hr_gs$group_size)
 
-
 ##home range overlap########
 d_hr_ov <- read.csv("data/df_slpHR_dyadic_overlap.csv")
 str(d_hr_ov)
@@ -70,13 +69,12 @@ d_hr_ov$hr_area_mean1_std <- standardize(d_hr_ov$hr_area_mean1)
 d_hr_ov$hr_area_mean2_std <- standardize(d_hr_ov$hr_area_mean2)
 
 ##daily path length
-d_hr_dpl <- read.csv("data/df_GPS_daily_path_length.csv")
-str(d_hr_dpl)
-d_hr_dpl <- clean_names(d_hr_dpl)
-str(d_hr_dpl)
-d_hr_dpl$year <-as.integer(substr(d_hr_dpl$date, 1, 4))
-d_hr_gs$group_index <- as.integer(as.factor(d_hr_gs$group))
-d_hr_gs$group_size_std <- standardize(d_hr_gs$group_size)
+d_dpl <- read.csv("data/df_GPS_daily_path_length.csv")
+str(d_dpl)
+d_hr_dpl <- clean_names(d_dpl)
+str(d_dpl)
+d_dpl$year <-as.integer(substr(d_dpl$date, 1, 4))
+d_dpl$group_index <- as.integer(as.factor(d_dpl$group))
 
 # get group sizes by group_year
 annual_group_sizes <- read.csv("data/annual_group_sizes.csv") %>% 
@@ -84,7 +82,11 @@ annual_group_sizes <- read.csv("data/annual_group_sizes.csv") %>%
   dplyr::select(id, group_size) 
 
 # give dpl dataframe group size column
-d_hr_dpl <- d_hr_dpl %>% 
+d_dpl_gs <- d_dpl %>% 
   mutate(id = str_c(group, year, sep = "_")) %>% 
   left_join(annual_group_sizes, by = "id") %>% 
-  dplyr::select(-id)
+  dplyr::select(-id) %>% 
+  mutate(group_size_std = standardize(group_size),
+         dist.ML = dist.ML/1000) %>% # change dpl to km
+  rename(dpl_mean = dist.ML) %>% 
+  dplyr::select(group, dpl_mean, year, group_index, group_size, group_size_std)
