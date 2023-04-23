@@ -183,7 +183,7 @@ precis(m_ov_4 , depth=1 )
 precis(m_ov_4 , depth=3 )
 
 ##########DAILY PATH LENGTH##############
-#varying intecepts and slopes
+#varying intercepts and slopes
 
 # gamma
 set.seed(13)
@@ -199,8 +199,6 @@ m_dpl_1_gam <- ulam(
   ) , data=d_dpl_gs , chains=4 , cores=4 ,control=list(adapt_delta=0.99))
 
 
-trankplot(m_gs_1) #diagnostics of mixing
-sort(unique(d_dpl_gs$group))
-temp <- precis(m_dpl_1_gam , depth=3 )
-names <- paste(temp@row.names[1:22] , sort(unique(d_hr_gs$group)) )
-plot(precis(m_gs_1_gam , depth=3 ))
+trankplot(m_dpl_1_gam) #diagnostics of mixing
+dev.off()
+plot(precis(m_dpl_1_gam , depth=3 ))
