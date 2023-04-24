@@ -54,6 +54,8 @@ str(d_hr_ov)
 d_hr_gs_min <- d_hr_gs[,4:9]
 joined_df <- left_join(d_hr_ov, d_hr_gs_min, by=dplyr::join_by(p1 == id))
 
+# add group sizes by joining from home range area dataframe 
+# (also could use group size dataframe just added to repository)
 for(i in 15:19){
   names(joined_df)[i] <- paste0(names(joined_df) , "1")[i]
 }
@@ -68,6 +70,10 @@ d_hr_ov$group_size2_std <- standardize(d_hr_ov$group_size2)
 d_hr_ov$hr_area_mean1_std <- standardize(d_hr_ov$hr_area_mean1)
 d_hr_ov$hr_area_mean2_std <- standardize(d_hr_ov$hr_area_mean2)
 
+# add relative group sizes
+d_hr_ov$rel_group_size <- d_hr_ov$group_size1 - d_hr_ov$group_size2
+d_hr_ov$rel_group_size_std <- standardize(d_hr_ov$rel_group_size)
+
 ##daily path length
 d_dpl <- read.csv("data/df_GPS_daily_path_length.csv")
 str(d_dpl)
@@ -77,7 +83,7 @@ d_dpl$year <-as.integer(substr(d_dpl$date, 1, 4))
 d_dpl$group_index <- as.integer(as.factor(d_dpl$group))
 
 # get group sizes by group_year
-annual_group_sizes <- read.csv("data/annual_group_sizes.csv") %>% 
+annual_group_sizes <- read.csv("data/annual_group_sizes.csv") %>% # group size dataframe
   mutate(id = str_c(group,year,sep = "_")) %>% 
   dplyr::select(id, group_size) 
 
