@@ -3,8 +3,10 @@ library(cmdstanr)
 library(janitor)
 library(dplyr)
 
+# option to make stan run faster
 options(mc.cores = parallel::detectCores())
 
+# make list for overlap model
 listerine <- list(
   overlap_uds=d_hr_ov$overlap_uds ,
   dyad_index=d_hr_ov$dyad_index,
@@ -14,7 +16,8 @@ listerine <- list(
   group_size1_std = d_hr_ov$group_size1_std ,
   group_size2_std = d_hr_ov$group_size2_std ,
   hr_area_mean1_std = d_hr_ov$hr_area_mean1_std ,
-  hr_area_mean2_std = d_hr_ov$hr_area_mean2_std
+  hr_area_mean2_std = d_hr_ov$hr_area_mean2_std,
+  rel_group_size_std = d_hr_ov$rel_group_size_std
 )
 
 ##simulate to figure out beta regression in rethinking
@@ -181,6 +184,27 @@ m_ov_4 <- ulam(
   data=listerine , chains=4 , cores=4 , iter=1000, control=list(adapt_delta=0.99))
 precis(m_ov_4 , depth=1 )
 precis(m_ov_4 , depth=3 )
+
+# add relative group size as predictor (is it bad to have group size and rel group size in same model?)
+set.seed(53)
+m_ov_5 <- ulam(
+  alist(
+    overlap_uds ~ dbeta2( p , theta) ,
+    logit(p) <- d[dyad_index] + g[g1_index] + g[g2_index]
+    + bGS_g[g1_index]*group_size1_std + bGS_g[g2_index]*group_size2_std
+    + bHR_g[g1_index]*hr_area_mean1_std + bHR_g[g2_index]*hr_area_mean2_std
+    + bRGS_g*rel_group_size_std,
+    
+    c(a,bGS,bHR, bRGS) ~ dnorm(0,1),
+    c(g,bGS_g,bHR_g)[g1_index]  ~ multi_normal( c(a,bGS,bHR) , Rho , sigma_g ),
+    d[dyad_index]  ~ normal(0,sigma_d),
+    bRGS_g ~ dnorm(0,1),
+    c(theta,sigma_g,sigma_d) ~ dexp(1),
+    Rho ~ lkj_corr(3)
+  ) , 
+  data=listerine , chains=4 , cores=4 , iter=1000, control=list(adapt_delta=0.99))
+
+precis(m_ov_5 , depth=3 )
 
 ##########DAILY PATH LENGTH##############
 #varying intercepts and slopes
