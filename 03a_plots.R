@@ -2,7 +2,7 @@ library(RColorBrewer)
 group_pal <- brewer.pal( max(d_hr_gs$group_index), "Spectral")
 
 ##########hr_area as outcome###############
-plot(precis(m_gs_1 , depth=2))
+plot(precis(m_gs_1_gam , depth=2))
 
 # generate posterior predictions using link
 
