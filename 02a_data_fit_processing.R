@@ -9,6 +9,7 @@ str(d_hr_gs)
 d_hr_gs$group_index <- as.integer(as.factor(d_hr_gs$group))
 d_hr_gs$group_size_std <- standardize(d_hr_gs$group_size)
 
+
 ##home range overlap########
 d_hr_ov <- read.csv("data/df_slpHR_dyadic_overlap.csv")
 str(d_hr_ov)
@@ -54,6 +55,51 @@ str(d_hr_ov)
 d_hr_gs_min <- d_hr_gs[,4:9]
 joined_df <- left_join(d_hr_ov, d_hr_gs_min, by=dplyr::join_by(p1 == id))
 
+
+# Make weights for competitive ability using overlaps ------------------------
+
+
+# pivot overlaps wider to make into weights for comp ability
+# first need to pivot longer so that every group year is represented in p1
+# this will create duplicate dyads 
+# but then when we pivot wider, every unique group year will have a column for every other group
+weights <- d_hr_ov %>% 
+  group_by(g1) %>% 
+  mutate(neighbor = str_c("neighbor", 
+                          #as.numeric(as.factor(g2)), # list neighbors numerically so there are no self comparisons
+                          g2,
+                          "weight", # can do this instead to see groups but creates self comparisons
+                          sep = "_")) %>% 
+  ungroup() %>%
+  pivot_longer(cols = p1:p2,
+               names_to = "old_name",
+               values_to = "p1") %>% 
+  rename(id = p1) %>% 
+  # left_join(dplyr::select(d_hr_gs, id, group_size), 
+  #           by = "id") %>% 
+  arrange(id) %>% 
+  pivot_wider(id_cols = id,
+              names_from = neighbor,
+              values_from = overlap_uds) %>% 
+  mutate(across(2:12, ~replace(., lengths(.) == 0, 0.000000001))) %>%
+  left_join(dplyr::select(d_hr_gs,id, group, year, group_size, group_size_std, group_index, hr_area_mean), 
+            by = "id") %>% 
+  dplyr::select(c(id, group, group_index, year, group_size, group_size_std, hr_area_mean, 
+                  neighbor_1_weight, neighbor_2_weight, neighbor_3_weight, 
+                  neighbor_4_weight, neighbor_5_weight, neighbor_6_weight, 
+                  neighbor_7_weight, neighbor_8_weight, 
+                  neighbor_9_weight, neighbor_10_weight)) 
+
+
+##########
+# have to figure out how to add group sizes for each neighborng group
+# problem is making neighbor 1, 2, 3 etc. allows groups to not be compared to themselves
+# but then I don't know what group is what so can't add group sizes
+  
+
+#.......................................................
+
+
 # add group sizes by joining from home range area dataframe 
 # (also could use group size dataframe just added to repository)
 for(i in 15:19){
@@ -71,8 +117,10 @@ d_hr_ov$hr_area_mean1_std <- standardize(d_hr_ov$hr_area_mean1)
 d_hr_ov$hr_area_mean2_std <- standardize(d_hr_ov$hr_area_mean2)
 
 # add relative group sizes
-d_hr_ov$rel_group_size <- d_hr_ov$group_size1 - d_hr_ov$group_size2
-d_hr_ov$rel_group_size_std <- standardize(d_hr_ov$rel_group_size)
+d_hr_ov$rel_group_size1 <- d_hr_ov$group_size1 - d_hr_ov$group_size2
+d_hr_ov$rel_group_size1_std <- standardize(d_hr_ov$rel_group_size1)
+d_hr_ov$rel_group_size2 <- d_hr_ov$group_size2 - d_hr_ov$group_size1
+d_hr_ov$rel_group_size2_std <- standardize(d_hr_ov$rel_group_size2)
 
 ##daily path length
 d_dpl <- read.csv("data/df_GPS_daily_path_length.csv")
