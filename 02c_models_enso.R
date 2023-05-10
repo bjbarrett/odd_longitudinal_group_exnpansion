@@ -34,12 +34,12 @@ list_area <- list(
 
 
 list_ov <- list(
-  mean_annual_mei=d_hr_gs$mean_annual_mei ,
+  mean_annual_mei=d_hr_ov$mean_annual_mei ,
   overlap_uds=d_hr_ov$overlap_uds ,
   dyad_index=d_hr_ov$dyad_index,
   g1_index=d_hr_ov$g1_index,
   g2_index=d_hr_ov$g2_index,
-  year_index = as.integer(as.factor(d_hr_ov$y1)),
+  year_index = as.integer(as.factor(d_hr_ov$year)),
   group_size1_std = d_hr_ov$group_size1_std ,
   group_size2_std = d_hr_ov$group_size2_std ,
   hr_area_mean1_std = d_hr_ov$hr_area_mean1_std ,
@@ -100,18 +100,43 @@ m_ov1 <- ulam(
   alist(
     overlap_uds ~ dbeta2( p , theta) ,
     logit(p) <- d[dyad_index] + g[g1_index] + g[g2_index],
-    
-    c(a,bHR) ~ dnorm(0,1),
-    c(g,bHR_g)[g1_index]  ~ multi_normal( c(a,bHR) , Rho , sigma_g ),
+    g[g1_index]  ~ normal(0,sigma_g),
+    d[dyad_index]  ~ normal(0,sigma_d),
+    c(theta,sigma_g,sigma_d) ~ dexp(1)
+  ) , 
+  data=list_ov , chains=4 , cores=4 , iter=1000, control=list(adapt_delta=0.99) )
+precis(m_ov1 , depth=1 )
+plot(precis(m_ov1 , depth=3 ))
+
+m_ov2 <- ulam(
+  alist(
+    overlap_uds ~ dbeta2( p , theta) ,
+    logit(p) <- a + d[dyad_index] + g[g1_index] + g[g2_index]
+    + bENSO*mean_annual_mei,
+    c(a,bENSO) ~ dnorm(0,1),
+    g[g1_index]  ~ normal(0,sigma_g),
     d[dyad_index]  ~ normal(0,sigma_d),
     c(theta,sigma_g,sigma_d) ~ dexp(1),
     Rho ~ lkj_corr(3)
   ) , 
-  data=list_ov , chains=4 , cores=4 , iter=1000, control=list(adapt_delta=0.99) )
-precis(m_ov1 , depth=1 )
-plot(precis(m_ov_1 , depth=3 ))
+  data=list_ov , chains=4 , cores=4 , iter=1000, control=list(adapt_delta=0.999) )
 
-m_ov_3 <- ulam(
+precis(m_ov2 , depth=2)
+
+m_ov3 <- ulam(
+  alist(
+    overlap_uds ~ dbeta2( p , theta) ,
+    logit(p) <- d[dyad_index] + g[g1_index] + g[g2_index]
+    + bENSO_g[g1_index]*mean_annual_mei + bENSO_g[g2_index]*mean_annual_mei,
+    c(a,bENSO) ~ dnorm(0,1),
+    c(g,bENSO_g)[g1_index]  ~ multi_normal( c(a,bENSO) , Rho , sigma_g ),
+    d[dyad_index]  ~ normal(0,sigma_d),
+    c(theta,sigma_g,sigma_d) ~ dexp(1),
+    Rho ~ lkj_corr(3)
+  ) , 
+  data=list_ov , chains=4 , cores=4 , iter=1000, control=list(adapt_delta=0.999) )
+
+m_ov4 <- ulam(
   alist(
     overlap_uds ~ dbeta2( p , theta) ,
     logit(p) <- d[dyad_index] + g[g1_index] + g[g2_index]
@@ -125,9 +150,9 @@ m_ov_3 <- ulam(
     Rho ~ lkj_corr(3)
   ) , 
   data=list_ov , chains=4 , cores=4 , iter=1000, control=list(adapt_delta=0.99) )
-precis(m_ov_3 , depth=1 )
-plot(precis(m_ov_3 , depth=3 ))
+precis(m_ov4 , depth=1 )
+plot(precis(m_ov4 , depth=3 ))
 
-
+nrow(list_ov)
 
 
