@@ -51,6 +51,7 @@ m_gs_1_gauss <- ulam(
     c(sigma,sigma_g) ~ dexp(1)
   ) , data=d_hr_gs , chains=4 , cores=4 ,control=list(adapt_delta=0.99))
 
+
 set.seed(420)
 m_gs_1_gam <- ulam(
   alist(
@@ -213,7 +214,7 @@ m_ov_2 <- ulam(
     overlap_uds ~ dbeta2( p , theta) ,
     logit(p) <- d[dyad_index] + g[g1_index] + g[g2_index]
     + bGS_g[g1_index]*group_size1_std + bGS_g[g2_index]*group_size2_std,
-     
+
     c(a,bGS) ~ dnorm(0,1),
     c(g,bGS_g)[g1_index]  ~ multi_normal( c(a,bGS) , Rho , sigma_g ),
     d[dyad_index]  ~ normal(0,sigma_d),
@@ -240,7 +241,7 @@ m_ov_3 <- ulam(
   ) , 
   data=listerine , chains=4 , cores=4 , iter=1000, control=list(adapt_delta=0.99) )
 precis(m_ov_3 , depth=1 )
-precis(m_ov_3 , depth=3 )
+plot(precis(m_ov_3 , depth=3 ))
 
 set.seed(44)
 m_ov_4 <- ulam(
