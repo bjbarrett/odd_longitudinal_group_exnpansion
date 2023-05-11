@@ -45,7 +45,29 @@ for (i in 1:11){
   }
 }
 
+# BELOW IS WRONG! I TRIED TO ADAPT STAT RETHINKING CODE FOR INTERACTION MODEL
+# Hr area as outcome, group size and weighted neighbor effect as predictors 
+par(mfrow=c(1,3)) # 3 plots in 1 row
+for ( i in c(-1.5,0, 1.5, 3) ) {
+  idx <- which( d_weights$weighted_mean_neighbor_comp_std==i )
+  plot( d_weights$group_size_std[idx] , d_weights$hr_area_mean[idx] , xlim=c(-3,3) , ylim=c(0,8) ,
+        xlab="Standardized Group Size" , ylab="HR Area" , pch=16 , col=rangi2 )
+  mu <- link( m_gs_wt_1_gauss , data=data.frame( neighbors_effect_std==i , group_size_std=c(-1.5,0,1.5) ) )
+  for ( i in 1:20 ) lines( -2:2 , mu[i,] , col=col.alpha("black",0.3) )
+}
+
+## THIS WORKS FROM BRMS MODEL!
+# plot from brms model
+p <- plot(conditional_effects(m_wt_brms, spaghetti = TRUE, ndraws = 200), plot=F)[[3]]
+p + theme_bw() + facet_wrap(.~weighted_mean_neighbor_comp_std) + theme(legend.position = "bottom")
+
+#............................................
+##
 ## daily path length as outcome -----------------------
+##
+#..................................
+
+
 dev.off()
 plot(precis(m_dpl_1_gam , depth=2))
 

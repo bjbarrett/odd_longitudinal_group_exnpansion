@@ -68,6 +68,80 @@ temp <- precis(m_gs_1_gam , depth=3 )
 names <- paste(temp@row.names[1:22] , sort(unique(d_hr_gs$group)) )
 plot(precis(m_gs_1_gam , depth=3 ))
 
+## 
+# Interaction between group size and weighted mean -------------------
+##
+# weighted mean based on neighboring groups group size * overlap
+# weights are very biased at the moment because in some years groups have less neighbors because 
+# neighbors were not habituated yet or 
+# they are closer to the edge of study site and their neighbors have never been habituated
+
+wt_list<- list(
+  hr_area_mean = d_weights$hr_area_mean,
+  group_index = d_weights$group_index,
+  group_size_std = d_weights$group_size_std,
+  neighbors_effect_std = d_weights$weighted_mean_neighbor_comp_std
+)
+
+
+set.seed(67)
+m_gs_wt_1_gauss <- ulam(
+  alist(
+    hr_area_mean ~ dnorm( mu , sigma) ,
+    mu <- a_g[group_index] + 
+      bGS_g[group_index]*group_size_std + 
+      bCA_g[group_index]*neighbors_effect_std + 
+      bI_g[group_index]*group_size_std*neighbors_effect_std,
+    c(a_g,bGS_g,bCA_g,bI_g)[group_index] ~ multi_normal(c(a,bGS,bCA,bI),Rho_g,sigma_g),
+    a ~ dnorm(2.392861,1),
+    bGS ~ dnorm(0,1),
+    bCA ~ dnorm(0,1),
+    bI ~ dnorm(0,1),
+    Rho_g ~ dlkjcorr(4),
+    c(sigma,sigma_g) ~ dexp(1)
+  ) , data=wt_list , chains=4 , cores=4 ,control=list(adapt_delta=0.99))
+
+plot(precis(m_gs_wt_1_gauss))
+plot(precis(m_gs_wt_1_gauss, depth = 3))
+
+### BRMS model
+library(brms)
+
+# make data frame 
+wt_df <- d_weights %>% 
+  dplyr::select(hr_area_mean,
+                group, 
+                group_size_std, 
+                weighted_mean_neighbor_comp_std )
+
+# set priors
+reg_priors <- c(
+  prior(normal(0,1), class = "b"),
+  prior(normal(0,1.5), class = "Intercept"),
+  prior(exponential(0.67), class = "sd"),
+  prior(lkj(3), class = "cor")
+)
+
+# model with data
+m_wt_brms <- brm(
+  bf(hr_area_mean ~ group_size_std*weighted_mean_neighbor_comp_std + (group_size_std|group)),
+  data = wt_df,
+  save_pars = save_pars(all=TRUE),
+  family = Gamma(link = "log"),
+  prior = reg_priors,
+  init  = "0",
+  control = list(adapt_delta = 0.99999,
+                 max_treedepth = 13),
+  chains = 4, iter = 2000, warmup = 1000,
+  cores = 4, seed = 1234, 
+  backend = "cmdstanr"
+)
+
+# evaluate posterior
+pp_check(m_wt_brms, ndraws = 100)
+conditional_effects(m_wt_brms)
+mcmc_plot(m_wt_brms)
+
 ############HOME RANGE OVERLAP##################
 
 
@@ -186,27 +260,6 @@ m_ov_4 <- ulam(
 precis(m_ov_4 , depth=1 )
 precis(m_ov_4 , depth=3 )
 
-# add relative group size as predictor (is it bad to have group size and rel group size in same model?)
-set.seed(53)
-m_ov_5 <- ulam(
-  alist(
-    overlap_uds ~ dbeta2( p , theta) ,
-    logit(p) <- d[dyad_index] + g[g1_index] + g[g2_index]
-    + bGS_g[g1_index]*group_size1_std + bGS_g[g2_index]*group_size2_std
-    + bHR_g[g1_index]*hr_area_mean1_std + bHR_g[g2_index]*hr_area_mean2_std
-    + bRGS_g[g1_index]*rel_group_size1_std + bRGS_g[g2_index]*rel_group_size2_std,
-    
-    c(a,bGS,bHR, bRGS) ~ dnorm(0,1),
-    c(g,bGS_g,bHR_g,bRGS_g)[g1_index]  ~ multi_normal( c(a,bGS,bHR, bRGS) , Rho , sigma_g ),
-    d[dyad_index]  ~ normal(0,sigma_d),
-    c(theta,sigma_g,sigma_d) ~ dexp(1),
-    Rho ~ lkj_corr(3)
-  ) , 
-  data=listerine , chains=4 , cores=4 , iter=1000, control=list(adapt_delta=0.99))
-
-precis(m_ov_5 , depth=3 )
-trankplot(m_ov_5)
-
 ##########DAILY PATH LENGTH##############
 #varying intercepts and slopes
 
@@ -227,3 +280,4 @@ m_dpl_1_gam <- ulam(
 trankplot(m_dpl_1_gam) #diagnostics of mixing
 dev.off()
 plot(precis(m_dpl_1_gam , depth=3 ))
+
