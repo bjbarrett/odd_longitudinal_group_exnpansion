@@ -1,15 +1,47 @@
 library(rsoi)
 library(janitor)
+library(RColorBrewer)
 #get enso data
 mei <- clean_names(download_mei())
 d_mei <- mei[mei$year >= min(d_hr_gs$year),]
+d_mei <- d_mei[complete.cases(d_mei),]
 plot(d_mei$mei~d_mei$date)
 #combie data frames, will do posterior across tiem series later
 str(d_hr_gs)
 str(d_mei)
-d_mei$mean_annual_mei <- d_mei
-sapply(d_mei$mei , 1 , mean)
+elcol_pal <- rev(brewer.pal(3 , "RdYlBu"))
+group_pal <- brewer.pal(11 , "Spectral")
 
+d_mei$phase_index <- as.integer(d_mei$phase)
+plot(d_mei$mei~d_mei$date , col=elcol_pal[d_mei$phase_index] , pch="x" , cex=0.5)
+mei_spl <- with(d_mei, smooth.spline(date, mei))
+lines(mei_spl, col = "grey3")
+abline(v=d_mei$date[1:33] , col="grey")
+d_hr_gs_2 <- merge(d_hr_gs, d_mei , by="year")
+d_hr_gs_2 <- d_hr_gs_2[d_hr_gs_2$month=="JJ",]
+
+#all groups
+plot(d_mei$mei~d_mei$date , col=elcol_pal[d_mei$phase_index] , pch="x" , cex=0.7 , ylim=c(-2.5,2.5))
+lines(mei_spl, col = "grey3")
+points( d_hr_gs_2$date , standardize(d_hr_gs_2$hr_area_mean) , col=group_pal[d_hr_gs_2$group_index] , pch=19)
+abline(v=d_mei$date[1:33] , col="grey")
+for(i in c(1:3,5:11)){
+  grp_spl <- with(d_hr_gs_2[d_hr_gs_2$group_index==i,], smooth.spline(date, mei ,spar=.5))
+  lines(grp_spl, col = group_pal[i])
+}
+
+#per group plot
+for(i in 1:11){
+  plot(d_mei$mei~d_mei$date , col=elcol_pal[d_mei$phase_index] , pch="x" ,
+       cex=0.7 , ylim=c(-2.5,2.5) , main=min(d_hr_gs_2$group[d_hr_gs_2$group_index==i] ) )
+  lines(mei_spl, col = "grey3")
+  points( d_hr_gs_2$date[d_hr_gs_2$group_index==i] , 
+          standardize(d_hr_gs_2$hr_area_mean[d_hr_gs_2$group_index==i]) , 
+          col=group_pal[i] , pch=19)
+  abline(v=d_mei$date[1:33] , col="grey")
+}
+
+str(d_hr_gs_2)
 mean_df <- aggregate(mei ~ year, d_mei, mean)
 names(mean_df)[2] <- "mean_annual_mei"
 d_hr_gs <- merge(d_hr_gs, mean_df , by="year")
