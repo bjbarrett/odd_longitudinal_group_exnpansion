@@ -6,7 +6,7 @@ mei <- clean_names(download_mei())
 d_mei <- mei[mei$year >= min(d_hr_gs$year),]
 d_mei <- d_mei[complete.cases(d_mei),]
 plot(d_mei$mei~d_mei$date)
-#combie data frames, will do posterior across tiem series later
+#combie data frames, will do posterior across time series later
 str(d_hr_gs)
 str(d_mei)
 elcol_pal <- rev(brewer.pal(3 , "RdYlBu"))
@@ -19,6 +19,10 @@ lines(mei_spl, col = "grey3")
 abline(v=d_mei$date[1:33] , col="grey")
 d_hr_gs_2 <- merge(d_hr_gs, d_mei , by="year")
 d_hr_gs_2 <- d_hr_gs_2[d_hr_gs_2$month=="JJ",]
+min(d_mei$year)
+d_mei$year_index_overall <- d_mei$year - 1990
+d_dpl$year <- as.integer(year(d_dpl$date))
+d_dpl_gs_2 <- merge(d_dpl, d_mei , by="year")
 
 #all groups
 plot(d_mei$mei~d_mei$date , col=elcol_pal[d_mei$phase_index] , pch="x" , cex=0.7 , ylim=c(-2.5,2.5))
@@ -44,27 +48,46 @@ for(i in 1:11){
 str(d_hr_gs_2)
 mean_df <- aggregate(mei ~ year, d_mei, mean)
 names(mean_df)[2] <- "mean_annual_mei"
-d_hr_gs <- merge(d_hr_gs, mean_df , by="year")
-d_hr_gs$year_index <- as.integer(as.factor(d_hr_gs$year))
+d_mei_hr_data <- d_mei[is.element(d_mei$year , d_hr_gs_3$year),]
+d_hr_gs_3 <- merge(d_hr_gs, mean_df , by="year")
+d_hr_gs_3$year_index <- as.integer(as.factor(d_hr_gs_3$year))
+
 d_hr_ov$year <- d_hr_ov$y1
-d_hr_ov <-merge(d_hr_ov, mean_df , by="year")
+d_hr_ov_3 <-merge(d_hr_ov, mean_df , by="year")
 #plot raw data
-plot(hr_area_mean~mean_annual_mei , data=d_hr_gs)
-plot(overlap_uds~mean_annual_mei , data=d_hr_ov)
+plot(hr_area_mean~mean_annual_mei , data=d_hr_gs_3)
+plot(overlap_uds~mean_annual_mei , data=d_hr_ov_3)
 
 ####
 plot(mean_df[,2]~mean_df[,1])
 set.seed(420)
+str(d_hr_gs_3)
 
 list_area <- list(
-  hr_area_mean=d_hr_gs$hr_area_mean ,
-  mean_annual_mei=d_hr_gs$mean_annual_mei ,
-  group_index=d_hr_gs$group_index ,
-  group_size=d_hr_gs$group_size_std ,
-  year_index=d_hr_gs$year_index 
+  hr_area_mean=d_hr_gs_3$hr_area_mean ,
+  hr_area_high=d_hr_gs_3$hr_area_high ,
+  hr_area_low=d_hr_gs_3$hr_area_low ,
+  hr_area_sd=d_hr_gs_3$hr_area_sd ,
+  mean_annual_mei=d_hr_gs_3$mean_annual_mei ,
+  group_index=d_hr_gs_3$group_index ,
+  group_size=d_hr_gs_3$group_size_std ,
+  year_index=d_hr_gs_3$year_index 
 )
 
+list_area_2 <- list(
+  hr_area_mean=d_hr_gs_3$hr_area_mean ,
+  hr_area_high=d_hr_gs_3$hr_area_high ,
+  hr_area_low=d_hr_gs_3$hr_area_low ,
+  hr_area_sd=d_hr_gs_3$hr_area_sd ,
+  group_index=d_hr_gs_3$group_index ,
+  group_size=d_hr_gs_3$group_size_std ,
+  year_index=d_hr_gs_3$year_index,
+  mei=d_mei_hr_data$mei ,
+  year_mei=d_mei_hr_data$year ,
+  year_index_mei=as.integer(as.factor(d_mei_hr_data$year))
+)
 
+## this might need a fixin
 list_ov <- list(
   mean_annual_mei=d_hr_ov$mean_annual_mei ,
   overlap_uds=d_hr_ov$overlap_uds ,
@@ -80,20 +103,96 @@ list_ov <- list(
   rel_group_size2_std = d_hr_ov$rel_group_size2_std
 )
 
+# m1 <- ulam(
+#   alist(
+#     hr_area_mean ~ dgamma2( lambda , k) ,
+#     #log(lambda) <- a_g[group_index] + bGS_g[group_index]*group_size_std,
+#     log(lambda) <- a_g[group_index] + 
+#       bENSO_g[group_index]*mean_annual_mei ,
+#     c(a_g,bENSO_g)[group_index] ~ multi_normal(c(a,bENSO),Rho_g,sigma_g),
+#     a ~ dnorm(2.392861,2),
+#     bENSO ~ dnorm(0,2),
+#     Rho_g ~ dlkjcorr(4),
+#     c(k,sigma_g) ~ dexp(1)
+#   ) , data=list_area , chains=4 , cores=4 ,control=list(adapt_delta=0.999))
+# plot(precis(m1 , depth=2))
+# precis(m1 , depth=2)
+
 m1 <- ulam(
   alist(
     hr_area_mean ~ dgamma2( lambda , k) ,
-    #log(lambda) <- a_g[group_index] + bGS_g[group_index]*group_size_std,
-    log(lambda) <- a_g[group_index] + 
-      bENSO_g[group_index]*mean_annual_mei ,
-    c(a_g,bENSO_g)[group_index] ~ multi_normal(c(a,bENSO),Rho_g,sigma_g),
-    a ~ dnorm(2.392861,2),
-    bENSO ~ dnorm(0,2),
-    Rho_g ~ dlkjcorr(4),
-    c(k,sigma_g) ~ dexp(1)
-  ) , data=list_area , chains=4 , cores=4 ,control=list(adapt_delta=0.999))
-plot(precis(m1 , depth=2))
-precis(m1 , depth=2)
+    log(lambda) <- v_mu[1] + v[group_index,1] + 
+      (v_mu[2] + v[group_index,2])*mean_annual_mei ,
+    
+    transpars> matrix[group_index,2]:v <-
+      compose_noncentered( sigma_g , L_Rho_g , z_g ),
+    matrix[2,group_index]: z_g ~ normal( 0 , 1 ),
+    
+    vector[2]:v_mu[[2]] ~ normal(0,2),
+    vector[2]:v_mu[[1]] ~ normal(2.392861,2) ,
+    cholesky_factor_corr[2]:L_Rho_g ~ lkj_corr_cholesky( 3 ),
+    vector[2]: sigma_g ~ half_normal(0,1),
+    k ~ exponential(1),
+    gq> matrix[2,2]:Rho_g <<- Chol_to_Corr(L_Rho_g)
+    
+  ) , data=list_area , chains=4 , cores=4 , control=list(adapt_delta=0.95) )
+
+precis(m1, depth=3)
+###### model the yearly enso as a posterior
+mm <- ulam(
+  alist(
+    mei ~  dnorm( mu , sigma ),
+    mu <- am[year_index_mei],
+    sigma ~ dexp(1),
+    am[year_index_mei] ~ dnorm(0,2)
+  ) , data=list_area_2 , chains=4 , cores=4 , control=list(adapt_delta=0.95)
+)
+
+
+precis(mm, depth=2)
+
+post <- extract.samples(mm)
+str(post)
+#plot means
+for(i in 1:max(list_area_2$year_index_mei)){
+  dens(post$am[,i], xlim=c(-2.5,2.5))
+  points (list_area_2$mei[list_area_2$year_index_mei==i] , rep(0,12) )
+}
+
+mm2 <- ulam(
+  alist(
+    mei ~  dnorm( mu_mei , sigma_mei ),
+    vector[24]:mei_modeled
+    mu <- am[year_index_mei],
+    sigma ~ dexp(1),
+    am[year_index_mei] ~ dnorm(0,2)
+  ) , data=list_area_2 , chains=4 , cores=4 , control=list(adapt_delta=0.95)
+)
+
+
+m1y <- ulam(
+  alist(
+    hr_area_mean ~ dgamma2( lambda , k) ,
+    log(lambda) <- v_mu[1] + v[group_index,1] + 
+      (v_mu[2] + v[group_index,2])*mei[year_index] ,
+    mei[year_index] ~ MEI[year_index]*mean_annual_mei
+    transpars> matrix[group_index,2]:v <-
+      compose_noncentered( sigma_g , L_Rho_g , z_g ),
+    matrix[2,group_index]: z_g ~ normal( 0 , 1 ),
+    
+    vector[2]:v_mu[[2]] ~ normal(0,2),
+    vector[2]:v_mu[[1]] ~ (2.392861,2),
+    cholesky_factor_corr[2]:L_Rho_g ~ lkj_corr_cholesky( 3 ),
+    vector[2]: sigma_g ~ half_normal(0,1),
+    k ~ exponential(1),
+    gq> matrix[2,2]:Rho_g <<- Chol_to_Corr(L_Rho_g)
+    
+  ) , data=list_area , chains=4 , cores=4 , control=list(adapt_delta=0.95) )
+
+
+plot(precis(m1 , depth=3 , pars=c("v_mu" , "sigma_g" , "Rho_g") ) )
+precis(m1 , depth=3)
+
 
 m2 <- ulam(
   alist(
@@ -127,6 +226,27 @@ plot(precis(m3 , depth=3))
 precis(m3 , depth=2)
 precis(m2 , depth=2)
 
+m3 <- ulam(
+  alist(
+    hr_area_mean ~ dgamma2( lambda , k) ,
+    log(lambda) <- v_mu[1] + v[group_index,1] + 
+      (v_mu[2] + v[group_index,2])*mean_annual_mei +
+      (v_mu[3] + v[group_index,3])*group_size,
+    
+    transpars> matrix[group_index,3]:v <-
+      compose_noncentered( sigma_g , L_Rho_g , z_g ),
+    matrix[3,group_index]: z_g ~ normal( 0 , 1 ),
+    vector[3]:v_mu[[3]] ~ normal(0,1),
+    vector[3]:v_mu[[2]] ~ normal(0,1),
+    vector[3]:v_mu[[1]] ~ normal(2.392861,2),
+    cholesky_factor_corr[3]:L_Rho_g ~ lkj_corr_cholesky( 3 ),
+    vector[3]: sigma_g ~ exponential(1),
+    k ~ exponential(1),
+    gq> matrix[3,3]:Rho_g <<- Chol_to_Corr(L_Rho_g)
+    
+  ) , data=list_area , chains=4 , cores=4 , control=list(adapt_delta=0.95) )
+
+precis(m3, depth=3)
 ##overlap
 m_ov1 <- ulam(
   alist(
