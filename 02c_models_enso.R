@@ -22,8 +22,7 @@ d_hr_gs_2 <- merge(d_hr_gs, d_mei , by="year")
 d_hr_gs_2 <- d_hr_gs_2[d_hr_gs_2$month=="JJ",]
 min(d_mei$year)
 d_mei$year_index_overall <- d_mei$year - 1990
-d_dpl$year <- as.integer(year(d_dpl$date))
-d_dpl_gs_2 <- merge(d_dpl, d_mei , by="year")
+
 
 #all groups
 plot(d_mei$mei~d_mei$date , col=elcol_pal[d_mei$phase_index] , pch="x" , cex=0.7 , ylim=c(-2.5,2.5))
@@ -166,26 +165,29 @@ for(i in 1:max(list_area_2$year_index_mei)){
   }
 }
 
+#just using postrior of mean
 m1dist <- ulam(
   alist(
     hr_area_mean ~ dgamma2( lambda , k) ,
     log(lambda) <- v_mu[1] + v[group_index,1] + 
       (v_mu[2] + v[group_index,2])*am[year_index] ,
+    ##the mei submodel
     mei ~  dnorm( mu , sigma ),
     mu <- am[year_index_mei],
     sigma ~ dexp(1),
     am[year_index_mei] ~ dnorm(0,2),
+    ## cholesky decomop for vcov matrix
     transpars> matrix[group_index,2]:v <-
       compose_noncentered( sigma_g , L_Rho_g , z_g ),
     matrix[2,group_index]: z_g ~ normal( 0 , 1 ),
-    
+    #other priors
     vector[2]:v_mu[[2]] ~ normal(0,2),
     vector[2]:v_mu[[1]] ~ normal(2.392861,2) ,
     cholesky_factor_corr[2]:L_Rho_g ~ lkj_corr_cholesky( 3 ),
     vector[2]: sigma_g ~ half_normal(0,1),
     k ~ exponential(1),
+    # back transform in GQ
     gq> matrix[2,2]:Rho_g <<- Chol_to_Corr(L_Rho_g)
-    
   ) , data=list_area_2 , chains=4 , cores=4 , control=list(adapt_delta=0.95) )
 
 #model the distribution of enso as a predictor
@@ -194,25 +196,57 @@ m1dist2 <- ulam(
     hr_area_mean ~ dgamma2( lambda , k) ,
     log(lambda) <- v_mu[1] + v[group_index,1] + 
       (v_mu[2] + v[group_index,2])*mei_dist[year_index] ,
+    ## enso submodel
     mei ~  dnorm( mu , sigma ),
     mu <- am[year_index_mei],
-  vector[24]:mei_dist ~ normal (am , sigma),
+    vector[24]:mei_dist ~ normal (am , sigma),
     sigma ~ dexp(1),
     am[year_index_mei] ~ dnorm(0,2),
+    ## main likelihood loop stuff
     transpars> matrix[group_index,2]:v <-
       compose_noncentered( sigma_g , L_Rho_g , z_g ),
     matrix[2,group_index]: z_g ~ normal( 0 , 1 ),
-    
     vector[2]:v_mu[[2]] ~ normal(0,2),
     vector[2]:v_mu[[1]] ~ normal(2.392861,2) ,
     cholesky_factor_corr[2]:L_Rho_g ~ lkj_corr_cholesky( 3 ),
-    vector[2]: sigma_g ~ half_normal(0,1),
+    vector[2]: sigma_g ~ exponential(1),
     k ~ exponential(1),
     gq> matrix[2,2]:Rho_g <<- Chol_to_Corr(L_Rho_g)
-    
-  ) , data=list_area_2 , chains=4 , cores=4 , control=list(adapt_delta=0.95) )
+  ) , data=list_area_2 , chains=4 , cores=4 , control=list(adapt_delta=0.99) )
 
-plot(precis(m1dist2, depth=2))
+precis(m1dist2, depth=2 )
+
+m1dist3 <- ulam(
+  alist(
+    hr_area_mean ~ dgamma2( lambda , k) ,
+    log(lambda) <- v_mu[1] + v[group_index,1] + 
+      (v_mu[2] + v[group_index,2])*mei_dist[year_index] +
+      (v_mu[3] + v[group_index,3])*group_size ,
+    ## enso submodel
+    mei ~  dnorm( mu , sigma ),
+    mu <- am[year_index_mei],
+    vector[24]:mei_dist ~ normal (am , sigma),
+    sigma ~ dexp(1),
+    am[year_index_mei] ~ dnorm(0,2),
+    ## main likelihood loop stuff
+    transpars> matrix[group_index,3]:v <-
+      compose_noncentered( sigma_g , L_Rho_g , z_g ),
+    matrix[3,group_index]: z_g ~ normal( 0 , 1 ),
+    vector[3]:v_mu[[3]] ~ normal(0,2),
+    vector[3]:v_mu[[2]] ~ normal(0,2),
+    vector[3]:v_mu[[1]] ~ normal(2.392861,2) ,
+    cholesky_factor_corr[3]:L_Rho_g ~ lkj_corr_cholesky( 3 ),
+    vector[3]: sigma_g ~ exponential(1),
+    k ~ exponential(1),
+    gq> matrix[3,3]:Rho_g <<- Chol_to_Corr(L_Rho_g)
+  ) , data=list_area_2 , chains=4 , cores=4 , control=list(adapt_delta=0.99) )
+
+precis(m1dist3 , depth=3)
+
+
+
+###stop here
+
 m1y <- ulam(
   alist(
     hr_area_mean ~ dgamma2( lambda , k) ,
