@@ -7,9 +7,9 @@ UD <- readRDS("Intermediate/ctmm/HR/slp_1990-2019_RSF_AKDEs.rds")
 # function to get summary information from AKDEs
 summarize_akde <- function(akde){
   
-  summary <- summary(akde, units = FALSE) 
+  summary <- summary(akde, units = FALSE) # makes the units fro all UDs the same (m2)
   
-  tibble(id = akde@info$identity,
+  tibble(id = akde@info$identity, 
          DOF = summary$DOF[1],
          low = (summary$CI[1])/1000000, # convert m2 to km2
          area = (summary$CI[2])/1000000,
