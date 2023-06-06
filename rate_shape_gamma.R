@@ -2,7 +2,7 @@ library(ctmm)
 library(tidyverse)
 
 # get UD telemetry object
-UD <- readRDS("Intermediate/ctmm/HR/slp_1990-2019_RSF_AKDEs.rds")
+UD <- readRDS("/Users/sifaka/Downloads/slp_1990-2019_RSF_AKDEs.rds")
 
 # function to get summary information from AKDEs
 summarize_akde <- function(akde){
@@ -22,6 +22,9 @@ make_df <- function(id){
 }
 
 # apply functions to get data frame and calculate shape and rate
-df <- make_df(UD) %>% 
+d_akde <- make_df(UD) %>% 
   mutate(rate = area/DOF,
          shape = DOF)
+
+str(d_akde)
+

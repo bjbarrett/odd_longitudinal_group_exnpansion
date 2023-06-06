@@ -2,6 +2,9 @@ library(rsoi)
 library(janitor)
 library(RColorBrewer)
 library(lubridate)
+library(ctmm)
+library(tidyverse)
+
 #get enso data
 mei <- clean_names(download_mei())
 d_mei <- mei[mei$year >= min(d_hr_gs$year),]
@@ -45,6 +48,7 @@ for(i in 1:11){
   abline(v=d_mei$date[1:33] , col="grey")
 }
 
+###mei consolidate
 str(d_hr_gs_2)
 mean_df <- aggregate(mei ~ year, d_mei, mean)
 names(mean_df)[2] <- "mean_annual_mei"
@@ -54,25 +58,43 @@ min_df <- aggregate(mei ~ year, d_mei, min)
 names(min_df)[2] <- "min_annual_mei"
 sd_df <- aggregate(mei ~ year, d_mei, sd)
 names(sd_df)[2] <- "sd_annual_mei"
+## get akdes
+# get UD telemetry object
+UD <- readRDS("/Users/sifaka/Downloads/slp_1990-2019_RSF_AKDEs.rds")
+
+# function to get summary information from AKDEs
+summarize_akde <- function(akde){
+  
+  summary <- summary(akde, units = FALSE) # makes the units fro all UDs the same (m2)
+
+  tibble(id = akde@info$identity, 
+         DOF = summary$DOF[1],
+         low = (summary$CI[1])/1000000, # convert m2 to km2
+         area = (summary$CI[2])/1000000,
+         high = (summary$CI[3])/1000000)
+}
+
+# wrapper to stack area info into data frame
+make_df <- function(id){
+  map_dfr(id, summarize_akde) 
+}
+
+# apply functions to get data frame and calculate shape and rate
+d_akde <- make_df(UD) %>% 
+  mutate(rate = area/DOF,
+         shape = DOF)
+
+str(d_akde)
+##compile bigger data frames
 
 d_hr_gs_3 <- merge(d_hr_gs, mean_df , by="year")
 d_hr_gs_3 <- merge(d_hr_gs_3, min_df , by="year")
 d_hr_gs_3 <- merge(d_hr_gs_3, max_df , by="year")
 d_hr_gs_3 <- merge(d_hr_gs_3, sd_df , by="year")
-
+d_hr_gs_3 <- merge(d_hr_gs_3, d_akde , by="id")
 #this might be wrong, we should look at ctmm output
 d_hr_gs_3$hr_shape <- (d_hr_gs_3$hr_area_mean) / d_hr_gs_3$hr_area_sd
 d_hr_gs_3$hr_rate <- 1/d_hr_gs_3$hr_area_sd
-
-for(i in 1:30){
-dens(rgamma(3000,shape=d_hr_gs_3$hr_shape[i] , rate=d_hr_gs_3$hr_rate[i]) , xlim=c(0,12))
-dens(rgamma(3000,shape=d_hr_gs_3$hr_shape[i] , scale=1/(d_hr_gs_3$hr_rate[i])) , xlim=c(0,12) , lty=2 , add=TRUE)
-dens(rgamma2(3000,shape=d_hr_gs_3$hr_shape[i] , scale=1/(d_hr_gs_3$hr_rate[i])) , xlim=c(0,12) , lty=3 , add=TRUE)
-
-points( d_hr_gs_3$hr_area_mean[i] , 0 )
-segments(d_hr_gs_3$hr_area_low[i] , 0, d_hr_gs_3$hr_area_high[i] , 0 , col="blue")
-}
-
 
 d_hr_gs_3$year_index <- as.integer(as.factor(d_hr_gs_3$year))
 d_mei_hr_data <- d_mei[is.element(d_mei$year , d_hr_gs_3$year),]
@@ -80,13 +102,10 @@ d_mei_hr_data <- d_mei[is.element(d_mei$year , d_hr_gs_3$year),]
 
 # d_hr_ov$year <- d_hr_ov$y1
 # d_hr_ov_3 <-merge(d_hr_ov, mean_df , by="year")
-#plot raw data
-plot(hr_area_mean~mean_annual_mei , data=d_hr_gs_3)
-plot(overlap_uds~mean_annual_mei , data=d_hr_ov_3)
 
-####
-plot(mean_df[,2]~mean_df[,1])
-set.seed(420)
+
+########extract rate and shape from ctmm fits for hr
+akdes <- readRDS("/Users/sifaka/Downloads/slp_1990-2019_RSF_AKDEs.rds")####
 str(d_hr_gs_3)
 
 list_area <- list(
@@ -108,6 +127,8 @@ list_area_2 <- list(
   hr_area_high=d_hr_gs_3$hr_area_high ,
   hr_area_low=d_hr_gs_3$hr_area_low ,
   hr_area_sd=d_hr_gs_3$hr_area_sd ,
+  hr_area_rate=d_hr_gs_3$rate ,
+  hr_area_shape=d_hr_gs_3$shape ,
   group_index=d_hr_gs_3$group_index ,
   group_size=d_hr_gs_3$group_size_std ,
   year_index=d_hr_gs_3$year_index,
@@ -123,6 +144,12 @@ list_area_2 <- list(
   sd_annual_mei=d_hr_gs_3$sd_annual_mei 
 )
 
+###visually inspect eate shape
+for(i in 1:20){
+  dens(rgamma(3000,shape=d_akde$shape[[i]] , rate=d_akde$rate[[i]]) , xlim=c(0,10000) )
+  points( d_akde$area[i] , 0 )
+  segments(  d_akde$low[i] , 0, d_akde$high[i] , 0 , col="blue")
+}
 
 ##stan models
 file_name <- 'stan_code/test_mei.stan'
