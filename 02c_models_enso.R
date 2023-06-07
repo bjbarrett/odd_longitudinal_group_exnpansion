@@ -74,27 +74,41 @@ summarize_akde <- function(akde){
          high = (summary$CI[3])/1000000)
 }
 
+summarize_akde_2 <- function(akde){
+  
+  summary <- summary(akde, units = FALSE) # makes the units fro all UDs the same (m2)
+  
+  tibble(id = akde@info$identity, 
+         DOF = summary$DOF[1],
+         low = (summary$CI[1]), 
+         area = (summary$CI[2]),
+         high = (summary$CI[3]))
+}
+
 # wrapper to stack area info into data frame
 make_df <- function(id){
   map_dfr(id, summarize_akde) 
 }
-
+make_df_2 <- function(id){
+  map_dfr(id, summarize_akde_2) 
+}
 # apply functions to get data frame and calculate shape and rate
 d_akde <- make_df(UD) %>% 
   mutate(rate = area/DOF,
          shape = DOF)
 
+d_akde_2 <- make_df_2(UD) %>% 
+  mutate(rate = area/DOF,
+         shape = DOF)
 str(d_akde)
+str(d_akde_2)
 ##compile bigger data frames
 
 d_hr_gs_3 <- merge(d_hr_gs, mean_df , by="year")
 d_hr_gs_3 <- merge(d_hr_gs_3, min_df , by="year")
 d_hr_gs_3 <- merge(d_hr_gs_3, max_df , by="year")
 d_hr_gs_3 <- merge(d_hr_gs_3, sd_df , by="year")
-d_hr_gs_3 <- merge(d_hr_gs_3, d_akde , by="id")
-#this might be wrong, we should look at ctmm output
-d_hr_gs_3$hr_shape <- (d_hr_gs_3$hr_area_mean) / d_hr_gs_3$hr_area_sd
-d_hr_gs_3$hr_rate <- 1/d_hr_gs_3$hr_area_sd
+d_hr_gs_3 <- merge(d_hr_gs_3, d_akde_2 , by="id")
 
 d_hr_gs_3$year_index <- as.integer(as.factor(d_hr_gs_3$year))
 d_mei_hr_data <- d_mei[is.element(d_mei$year , d_hr_gs_3$year),]
@@ -146,11 +160,19 @@ list_area_2 <- list(
 
 ###visually inspect eate shape
 for(i in 1:20){
-  dens(rgamma(3000,shape=d_akde$shape[[i]] , rate=d_akde$rate[[i]]) , xlim=c(0,10000) )
-  points( d_akde$area[i] , 0 )
-  segments(  d_akde$low[i] , 0, d_akde$high[i] , 0 , col="blue")
+  dens(rgamma(10000,shape=d_akde$shape[[i]], rate=d_akde$rate[[i]] ) , xlim=c(0,10000))
+  points( d_akde$area[i]*100 , 0 )
+  segments(  d_akde$low[i]*100,  d_akde$high[i]*100 , 0 , col="blue")
 }
 
+rgamma(10000,shape=d_akde$shape[[10]], rate=d_akde$rate[[10]] )
+median(rgamma(10000,shape=d_akde$shape[[10]], rate=d_akde$rate[[10]] ))
+mean(rgamma(10000,shape=d_akde$shape[[10]], rate=d_akde$rate[[10]] ))
+
+d_akde$area[[10]]
+dens(rgamma(10000,shape=d_akde$shape[[1]], rate=d_akde$rate[[1]] ))
+points( d_akde$area[1] , 0 )
+segments(  d_akde$low[1] , 0, d_akde$high[10] , 0 , col="blue")
 ##stan models
 file_name <- 'stan_code/test_mei.stan'
 fit= stan( file = file_name,
