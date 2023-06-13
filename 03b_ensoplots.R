@@ -16,8 +16,8 @@ par(mfrow = c(3, 4))
 par(cex = 0.6)
 par(mar = c(3, 3, 0, 0), oma = c(4, 4, 1, 1))
 
-plot(list_area_2$mean_annual_mei,list_area_2$hr_area_mean , ylab="home range area (ha)" ,
-     xlab="monthly ENSO index" , col=group.pal[list_area_2$group_index], xlim=c(min(list_area_2$mei),max(list_area_2$mei)) , ylim=c(0,9) )
+plot(list_area_2$mean_annual_mei,list_area_2$hr_area_mean , ylab="home range area (km^2)" ,
+     xlab="ENSO index" , col=group.pal[list_area_2$group_index], xlim=c(min(list_area_2$mei),max(list_area_2$mei)) , ylim=c(0,9) )
 title("overall posterior mean ", line = -1)
 for (obs in 1:list_area_2$N){
   points( post$am_pred[1:200, list_area_2$year_index[obs] ] ,
@@ -46,8 +46,8 @@ lines(seq.mei , lambda.PI[2,], col=1 , lty=3)
 for(g in 1:max(list_area_2$group_index)){
   plot(list_area_2$mean_annual_mei[list_area_2$group_index==g],
        list_area_2$hr_area_mean[list_area_2$group_index==g] , 
-       ylab="home range area (ha)" , ylim=c(0,9), 
-       xlab="monthly ENSO index" , col=group.pal[g], 
+       ylab="home range area (km^2)" , ylim=c(0,9), 
+       xlab="ENSO index" , col=group.pal[g], 
        xlim=c(min(list_area_2$mei),max(list_area_2$mei)))
   title(min(d_hr_gs_3$group[d_hr_gs_3$group_index==g]), line = -1)
   
@@ -78,7 +78,7 @@ lines(seq.mei , lambda.PI[1,], col=1 , lty=3)
 lines(seq.mei , lambda.PI[2,], col=1 , lty=3)
 }
 
-mtext("mean annual ENSO index (MEI)", side=1, line=1, cex=2, outer=TRUE)  
+mtext("ENSO index", side=1, line=1, cex=2, outer=TRUE)  
 mtext("mean home range area (km^2) ", side=2, line=1, cex=2, outer=TRUE)  
 dev.off()
 #########fit_hr_gs#########
@@ -128,7 +128,7 @@ for(g in 1:max(list_area_2$group_index)){
   plot(list_area_2$mean_annual_mei[list_area_2$group_index==g],
        list_area_2$hr_area_mean[list_area_2$group_index==g] , 
        ylab="home range area (km^2)" , ylim=c(0,9), 
-       xlab="monthly ENSO index" , col="white", 
+       xlab="ENSO index" , col="white", 
        xlim=c(min(list_area_2$mei),max(list_area_2$mei)))
   title(min(d_hr_gs_3$group[d_hr_gs_3$group_index==g]), line = -1)
   
@@ -158,7 +158,7 @@ for(g in 1:max(list_area_2$group_index)){
   lines(seq.mei , lambda.PI[1,], col=1 , lty=3)
   lines(seq.mei , lambda.PI[2,], col=1 , lty=3)
 }
-mtext("mean annual ENSO index (MEI)", side=1, line=1, cex=2, outer=TRUE)  
+mtext("ENSO index", side=1, line=1, cex=2, outer=TRUE)  
 mtext("mean home range area (km^2) ", side=2, line=1, cex=2, outer=TRUE)  
 
 dev.off()
