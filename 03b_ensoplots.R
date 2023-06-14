@@ -1,7 +1,7 @@
 library(RColorBrewer)
 group.pal <- brewer.pal( max(d_hr_gs$group_index), "Spectral")
 ######################################fit_hr
-post <- extract.samples(fit_hr) #different if fit
+post <- extract.samples(fit_hr_mei_meas_er) #different if fit
 par(mfrow = c(6, 4))
 
 for(i in 1:24){
@@ -71,7 +71,7 @@ for(g in 1:max(list_area_2$group_index)){
   lambda.PI <- apply( lambda , 2 , PI , prob=0.89 )
 
 for (i in 1:100) {
-  lines(seq.mei , lambda[i,] , col=col.alpha(group.pal[g]))
+  lines(seq.mei , lambda[i,] , col=col.alpha(group.pal[g]) , alpha=0.3)
 }
 lines(seq.mei , lambda.mean, col=1)
 lines(seq.mei , lambda.PI[1,], col=1 , lty=3)
@@ -82,7 +82,7 @@ mtext("ENSO index", side=1, line=1, cex=2, outer=TRUE)
 mtext("mean home range area (km^2) ", side=2, line=1, cex=2, outer=TRUE)  
 dev.off()
 #########fit_hr_gs#########
-post <- extract.samples(fit_hr_gs) #different if fit
+post <- extract.samples(fit_hr_mei_gs_meas_er) #different if fit
 par(mfrow = c(6, 4))
 
 for(i in 1:24){
@@ -152,7 +152,7 @@ for(g in 1:max(list_area_2$group_index)){
   lambda.mean <- apply( lambda , 2 , mean )
   lambda.PI <- apply( lambda , 2 , PI , prob=0.89 )
   for (i in 1:100) {
-    lines(seq.mei , lambda[i,] , col=col.alpha(group.pal[g]))
+    lines(seq.mei , lambda[i,] , col=col.alpha(group.pal[g]) , alpha = 0.3)
   }
   lines(seq.mei , lambda.mean, col=1)
   lines(seq.mei , lambda.PI[1,], col=1 , lty=3)
